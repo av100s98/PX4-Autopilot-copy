@@ -1,0 +1,40 @@
+name: Build PX4 SITL Windows
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout PX4
+        uses: actions/checkout@v3
+
+      - name: Install Chocolatey
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force; `
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+      - name: Install dependencies
+        run: |
+          choco install -y cmake ninja python sdl2
+
+      - name: Create build directory
+        run: mkdir build\px4_sitl_default
+
+      - name: Configure PX4 with CMake
+        run: cmake -S . -B build\px4_sitl_default -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build PX4 SITL
+        run: cmake --build build\px4_sitl_default --target px4_sitl_default --config Release
+
+      - name: Upload PX4 SITL .exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: px4-sitl-windows
+          path: build\px4_sitl_default\bin\px4.exe
